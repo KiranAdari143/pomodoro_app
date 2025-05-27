@@ -1,8 +1,21 @@
+// android/app/build.gradle
+
 plugins {
     id 'com.android.application'
     id 'kotlin-android'
     id 'com.google.gms.google-services'
     id 'dev.flutter.flutter-gradle-plugin'
+}
+
+import java.util.Properties
+
+// 1) Load your key.properties (in project root)
+def keyPropertiesFile = rootProject.file("key.properties")
+def keyProperties = new Properties()
+if (keyPropertiesFile.exists()) {
+    keyProperties.load(new FileInputStream(keyPropertiesFile))
+} else {
+    println "WARNING: key.properties not found at ${keyPropertiesFile}; using debug keystore!"
 }
 
 android {
@@ -11,18 +24,27 @@ android {
     ndkVersion = flutter.ndkVersion
 
     defaultConfig {
-        applicationId = "com.example.pomedaro_app"
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        applicationId "com.example.pomedaro_app"
+        minSdk        = flutter.minSdkVersion
+        targetSdk     = flutter.targetSdkVersion
+        versionCode   = flutter.versionCode
+        versionName   = flutter.versionName
+    }
+
+    // 2) Signing configuration
+    signingConfigs {
+        config {
+            keyAlias       keyProperties['keyAlias']
+            keyPassword    keyProperties['keyPassword']
+            // Since this file lives in android/app/, refer to it directly:
+            storeFile      file(keyProperties['storeFile'] ?: 'upload-keystore.jks')
+            storePassword  keyProperties['storePassword']
+        }
     }
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
-
-        // <-- enable Java 8+ core library desugaring
         coreLibraryDesugaringEnabled true
     }
 
@@ -32,7 +54,13 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.debug
+            signingConfig signingConfigs.config
+            shrinkResources false
+            minifyEnabled    false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            signingConfig signingConfigs.config
         }
     }
 }
@@ -44,10 +72,10 @@ flutter {
 dependencies {
     implementation platform('com.google.firebase:firebase-bom:32.3.1')
     implementation 'com.google.firebase:firebase-firestore'
-
-    // <-- the actual desugaring library
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.3'
 }
+
+// suppress obsolete‑options warning
 tasks.withType(JavaCompile).configureEach {
     options.compilerArgs << "-Xlint:-options"
 }

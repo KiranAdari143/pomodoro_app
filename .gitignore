@@ -56,3 +56,5 @@ android/app/*.iml
 
 # Generated files
 pubspec.lock
+key.properties
+app/upload-keystore.jks
